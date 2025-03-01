@@ -73,7 +73,7 @@ import androidx.compose.material.icons.filled.Add
 //import androidx.compose.material.icons.filled.Bookmark
 //import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.Book
+// import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
@@ -96,79 +96,8 @@ class AppViewModel : ViewModel() {
     val allAds = mutableStateListOf<Announcement>()
 
     init {
-        // Пример начальных данных
-        allAds.addAll(
-            listOf(
-                Announcement(
-                    title = "Пример обычного объявления",
-                    price = "1000 руб",
-                    category = "Услуги",
-                    geo = "Москва",
-                    workingTime = "10:00-18:00",
-                    isUserAd = false
-                ),
-                Announcement(
-                    title = "Горячее предложение!",
-                    price = "2000 руб",
-                    category = "Срочно",
-                    geo = "СПб",
-                    workingTime = "09:00-21:00",
-                    isHot = true,
-                    isUserAd = false
-                ),
-                Announcement(
-                    title = "Пример обычного объявления",
-                    price = "1000 руб",
-                    category = "Услуги",
-                    geo = "Москва",
-                    workingTime = "10:00-18:00",
-                    isUserAd = true
-                ),
-                Announcement(
-                    title = "Горячее предложение!",
-                    price = "2000 руб",
-                    category = "Срочно",
-                    geo = "СПб",
-                    workingTime = "09:00-21:00",
-                    isHot = true,
-                    isUserAd = true
-                ),
-                Announcement(
-                    title = "Пример обычного объявления",
-                    price = "1000 руб",
-                    category = "Услуги",
-                    geo = "Москва",
-                    workingTime = "10:00-18:00",
-                    isUserAd = true
-                ),
-                Announcement(
-                    title = "Горячее предложение!",
-                    price = "2000 руб",
-                    category = "Срочно",
-                    geo = "СПб",
-                    workingTime = "09:00-21:00",
-                    isHot = true,
-                    isUserAd = true
-                ),
-                Announcement(
-                    title = "Пример обычного объявления",
-                    price = "1000 руб",
-                    category = "Услуги",
-                    geo = "Москва",
-                    workingTime = "10:00-18:00",
-                    isUserAd = true
-                ),
-                Announcement(
-                    title = "Горячее предложение!",
-                    price = "2000 руб",
-                    category = "Срочно",
-                    geo = "СПб",
-                    workingTime = "09:00-21:00",
-                    isHot = true,
-                    isUserAd = true
-                )
-            )
-        )
+        // Загрузка мок-данных из отдельного файла
+        allAds.addAll(MockData.initialAnnouncements)
     }
 
     fun addAd(announcement: Announcement) {
