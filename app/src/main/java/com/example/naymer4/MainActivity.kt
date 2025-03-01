@@ -1,10 +1,10 @@
 package com.example.naymer4
 
-// import android.app.TimePickerDialog
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,31 +56,32 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-//import androidx.compose.material3.TimePicker
-//import androidx.compose.material3.TimePickerDefaults
-//import androidx.compose.material3.TimePickerState
-//import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.ui.window.Dialog
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.NavigationBarItemColors
-// import androidx.compose.material3.TextFieldColors
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
-//import androidx.compose.material.icons.filled.Home
-//import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material.icons.filled.Add
-//import androidx.compose.material.icons.filled.Bookmark
-//import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.AccessTime
-// import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.TextFieldDefaults
-
+//import androidx.compose.material3.TimePicker
+//import androidx.compose.material3.TimePickerDefaults
+//import androidx.compose.material3.TimePickerState
+//import androidx.compose.material3.rememberTimePickerState
+//import androidx.compose.material.icons.filled.Book
+//import androidx.compose.material.icons.filled.Bookmark
+//import androidx.compose.material.icons.filled.Person
+//import androidx.compose.material.icons.filled.Home
+//import androidx.compose.material.icons.filled.Whatshot
+//import androidx.compose.material3.TextFieldColors
+//import android.app.TimePickerDialog
 
 data class Announcement(
     val title: String,
@@ -113,7 +114,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MyApp()
+            AppTheme {
+                MyApp()
+            }
         }
     }
 }
@@ -159,97 +162,128 @@ fun TimePickerDialog(
     }
 }
 
-// Modify your MyApp function to share the ViewModel across screens
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyApp() {
     val navController = rememberNavController()
-    // Create a shared viewModel at this level that will be passed to screens
     val viewModel: AppViewModel = viewModel()
+    var showAdTypeSheet by remember { mutableStateOf(false) }
 
     Scaffold(
-        bottomBar = { BottomNavBar(navController = navController) }
+        bottomBar = {
+            BottomNavBar(
+                navController = navController,
+                onCreateClick = { showAdTypeSheet = true }
+            )
+        }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "normalAds",
+            startDestination = "adsList",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("normalAds") {
-                NormalAdsScreen(viewModel = viewModel)
-            }
-            composable("hotAds") {
-                HotAdsScreen(viewModel = viewModel)
-            }
-            composable("newAds") {
-                NewAdsScreen(navController = navController, viewModel = viewModel)
-            }
-            composable("profile") {
-                ProfileScreen(viewModel = viewModel)
+            composable("adsList") { NormalAdsScreen(viewModel = viewModel) }
+            composable("hotAds") { HotAdsScreen(viewModel = viewModel) } // Добавлено для горячих объявлений
+            composable("createNormalAd") { NewAdsScreen(navController = navController, viewModel = viewModel, isHotAd = false) }
+            composable("createHotAd") { NewAdsScreen(navController = navController, viewModel = viewModel, isHotAd = true) }
+            composable("bookmarks") { /* ваш экран закладок */ }
+            composable("profile") { ProfileScreen(viewModel = viewModel) }
+        }
+    }
+
+    // Модальное нижнее меню с выбором типа объявления
+    if (showAdTypeSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAdTypeSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Выберите тип объявления",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                // Кнопка для обычного объявления
+                Button(
+                    onClick = {
+                        showAdTypeSheet = false
+                        navController.navigate("createNormalAd")
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Text("Обычное объявление")
+                }
+                // Кнопка для горячего объявления
+                Button(
+                    onClick = {
+                        showAdTypeSheet = false
+                        navController.navigate("createHotAd")
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Text("Горячее объявление")
+                }
             }
         }
     }
 }
 
 @Composable
-fun BottomNavBar(navController: NavController) {
+fun BottomNavBar(navController: NavController, onCreateClick: () -> Unit) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+
+    // Общие цвета для элементов навигации
+    val itemColors = NavigationBarItemDefaults.colors(
+        selectedIconColor = primaryColor,
+        selectedTextColor = primaryColor,
+        unselectedIconColor = onSurfaceColor.copy(alpha = 0.6f),
+        unselectedTextColor = onSurfaceColor.copy(alpha = 0.6f)
+    )
+
+    // Разбиваем элементы навигации на левую и правую части
+    val leftNavItems = listOf(
+        Triple("adsList", "Main", Icons.Filled.Home),
+        Triple("hotAds", "Hot Ads", Icons.Filled.Whatshot)
+    )
+    val rightNavItems = listOf(
+        Triple("bookmarks", "Bookmarks", Icons.Default.Bookmarks),
+        Triple("profile", "Profile", Icons.Filled.Person)
+    )
 
     NavigationBar(
-        containerColor = Color.White,
-        contentColor = Color(0xFF673AB7),
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = primaryColor,
         tonalElevation = 8.dp,
-        modifier = Modifier.height(100.dp) // Фиксированная высота бара
+        modifier = Modifier.height(100.dp)
     ) {
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    imageVector = Icons.Filled.Home,
-                    contentDescription = "Main"
-                )
-            },
-            label = { Text("Main") },
-            selected = currentRoute == "normalAds",
-            onClick = { if (currentRoute != "normalAds") navController.navigate("normalAds") },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color(0xFF673AB7),
-                selectedTextColor = Color(0xFF673AB7),
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray
+        // Левые элементы навигации
+        leftNavItems.forEach { (route, label, icon) ->
+            NavigationBarItem(
+                icon = { Icon(imageVector = icon, contentDescription = label) },
+                label = { Text(text = label) },
+                selected = currentRoute == route,
+                onClick = { if (currentRoute != route) navController.navigate(route) },
+                colors = itemColors
             )
-        )
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    imageVector = Icons.Filled.Whatshot,
-                    contentDescription = "Hot Ads",
-                    modifier = Modifier.size(24.dp) // Фиксированный размер иконки
-                )
-            },
-            label = {
-                Text(
-                    "Hot Ads",
-                    maxLines = 2, // Запрещаем перенос текста
-                    minLines = 1,
-                    style = MaterialTheme.typography.bodySmall // Уменьшаем размер шрифта
-                )
-            },
-            selected = currentRoute == "hotAds",
-            onClick = { if (currentRoute != "hotAds") navController.navigate("hotAds") },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color(0xFF673AB7),
-                selectedTextColor = Color(0xFF673AB7),
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray
-            )
-        )
+        }
+
+        // Кнопка создания в центре
         NavigationBarItem(
             icon = {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .offset(y = (0).dp) // Сдвигаем кнопку вверх
-                        .background(Color(0xFF673AB7), CircleShape),
+                        .background(primaryColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -262,45 +296,20 @@ fun BottomNavBar(navController: NavController) {
             },
             label = { Text("") },
             selected = false,
-            onClick = { if (currentRoute != "newAds") navController.navigate("newAds") },
-            colors = NavigationBarItemDefaults.colors(
-                indicatorColor = Color.Transparent
-            )
+            onClick = onCreateClick,
+            colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
         )
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Bookmarks, // Replace with bookmark icon
-                    contentDescription = "Bookmarks"
-                )
-            },
-            label = { Text("Bookmarks") },
-            selected = currentRoute == "bookmarks",
-            onClick = { /* Navigate to bookmarks */ },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color(0xFF673AB7),
-                selectedTextColor = Color(0xFF673AB7),
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray
+
+        // Правые элементы навигации
+        rightNavItems.forEach { (route, label, icon) ->
+            NavigationBarItem(
+                icon = { Icon(imageVector = icon, contentDescription = label) },
+                label = { Text(text = label) },
+                selected = currentRoute == route,
+                onClick = { if (currentRoute != route) navController.navigate(route) },
+                colors = itemColors
             )
-        )
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    imageVector = Icons.Filled.Person,
-                    contentDescription = "Profile"
-                )
-            },
-            label = { Text("Profile") },
-            selected = currentRoute == "profile",
-            onClick = { if (currentRoute != "profile") navController.navigate("profile") },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color(0xFF673AB7),
-                selectedTextColor = Color(0xFF673AB7),
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray
-            )
-        )
+        }
     }
 }
 
@@ -324,35 +333,36 @@ object NavigationBarItemDefaults {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewAdsScreen(navController: NavController, viewModel: AppViewModel) {
+fun NewAdsScreen(
+    navController: NavController,
+    viewModel: AppViewModel,
+    isHotAd: Boolean // параметр определяет тип объявления
+) {
     var price by remember { mutableStateOf("") }
-    var isHotAd by remember { mutableStateOf(false) }
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var photoAttached by remember { mutableStateOf(false) }
 
-    // Category selection state
+    // Выбор категории
     var expanded by remember { mutableStateOf(false) }
     val categories = listOf("Программист", "Сантехник", "Электрик")
     var selectedCategory by remember { mutableStateOf(categories[0]) }
 
-    // Work days selection state
+    // Состояния для выбора дней работы (только для обычного объявления)
     val daysOfWeek = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
     var selectedDays by remember { mutableStateOf(setOf<String>()) }
 
-    // TimePicker states
+    // Состояния для выбора времени
     val startTimeState = rememberTimePickerState(is24Hour = true)
     val endTimeState = rememberTimePickerState(is24Hour = true)
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
 
-    // Format time helper function
     fun formatTime(hours: Int, minutes: Int): String {
         return String.format("%02d:%02d", hours, minutes)
     }
 
-    // Replace Column with LazyColumn to enable scrolling
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -383,7 +393,7 @@ fun NewAdsScreen(navController: NavController, viewModel: AppViewModel) {
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Category dropdown
+            // Выбор категории
             ExposedDropdownMenuBox(
                 expanded = expanded,
                 onExpandedChange = { expanded = !expanded }
@@ -431,27 +441,14 @@ fun NewAdsScreen(navController: NavController, viewModel: AppViewModel) {
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 8.dp)
-            ) {
-                Checkbox(
-                    checked = isHotAd,
-                    onCheckedChange = { isHotAd = it }
-                )
-                Text("Горячее объявление")
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Workdays selection
+            // Если обычное объявление, показываем выбор рабочих дней
             if (!isHotAd) {
                 Text(text = "Дни работы", style = MaterialTheme.typography.titleMedium)
                 Row(modifier = Modifier.fillMaxWidth()) {
                     daysOfWeek.forEach { day ->
                         val isSelected = selectedDays.contains(day)
                         Column(
-                            modifier = Modifier.padding(4.dp),
+                            modifier = Modifier.padding(3.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             androidx.compose.material3.Checkbox(
@@ -465,26 +462,21 @@ fun NewAdsScreen(navController: NavController, viewModel: AppViewModel) {
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Working hours selection
+            // Выбор времени работы
             Text(
                 text = "Время работы:",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
-
-            // Start time button
             Button(
                 onClick = { showStartTimePicker = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Начало: ${formatTime(startTimeState.hour, startTimeState.minute)}")
             }
-
-            // End time button
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = { showEndTimePicker = true },
@@ -493,7 +485,6 @@ fun NewAdsScreen(navController: NavController, viewModel: AppViewModel) {
                 Text("Окончание: ${formatTime(endTimeState.hour, endTimeState.minute)}")
             }
 
-            // Time picker dialogs
             if (showStartTimePicker) {
                 TimePickerDialog(
                     onCancel = { showStartTimePicker = false },
@@ -502,7 +493,6 @@ fun NewAdsScreen(navController: NavController, viewModel: AppViewModel) {
                     TimePicker(state = startTimeState)
                 }
             }
-
             if (showEndTimePicker) {
                 TimePickerDialog(
                     onCancel = { showEndTimePicker = false },
@@ -512,10 +502,8 @@ fun NewAdsScreen(navController: NavController, viewModel: AppViewModel) {
                 }
             }
 
-            // Add extra space before the create button
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Create ad button
             Button(
                 onClick = {
                     val newAnnouncement = Announcement(
@@ -528,16 +516,14 @@ fun NewAdsScreen(navController: NavController, viewModel: AppViewModel) {
                         isHot = isHotAd
                     )
                     viewModel.addAd(newAnnouncement)
-                    navController.navigate("normalAds") {
-                        popUpTo("normalAds") { inclusive = true }
+                    navController.navigate("adsList") {
+                        popUpTo("adsList") { inclusive = true }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Создать объявление")
             }
-
-            // Add padding at the bottom to ensure the button is visible
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -868,4 +854,3 @@ object CardDefaults {
         )
     }
 }
-
