@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -61,6 +62,8 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import com.example.naymer4.screens.BookmarksScreen
@@ -127,10 +130,17 @@ fun MyApp() {
 
     Scaffold(
         bottomBar = {
-            BottomNavBar(
-                navController = navController,
-                onCreateClick = { showAdTypeSheet = true }
-            )
+            Column {
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(),
+                    thickness = 2.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                BottomNavBar(
+                    navController = navController,
+                    onCreateClick = { showAdTypeSheet = true }
+                )
+            }
         }
     ) { innerPadding ->
         NavHost(
@@ -139,7 +149,7 @@ fun MyApp() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("adsList") { NormalAdsScreen(viewModel = viewModel) }
-            composable("hotAds") { HotAdsScreen(viewModel = viewModel) } // Добавлено для горячих объявлений
+            composable("hotAds") { HotAdsScreen(viewModel = viewModel) }
             composable("createNormalAd") { NewAdsScreen(navController = navController, viewModel = viewModel, isHotAd = false) }
             composable("createHotAd") { NewAdsScreen(navController = navController, viewModel = viewModel, isHotAd = true) }
             composable("bookmarks") { BookmarksScreen(viewModel = viewModel) }
@@ -220,8 +230,10 @@ fun BottomNavBar(navController: NavController, onCreateClick: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = primaryColor,
         tonalElevation = 8.dp,
-        modifier = Modifier.height(100.dp)
+        modifier = Modifier
+            .height(100.dp)
     ) {
+
         // Левые элементы навигации
         leftNavItems.forEach { (route, label, icon) ->
             NavigationBarItem(
@@ -408,18 +420,28 @@ fun AnnouncementItemFigma(
 fun HotAdsScreen(viewModel: AppViewModel) {
     val hotAds = viewModel.allAds.filter { it.isHot }
 
-    LazyColumn(
+    Column(
         modifier = Modifier
             .padding(16.dp)
             .fillMaxSize()
     ) {
-        items(hotAds) { ad ->
-            AnnouncementItemFigma(
-                announcement = ad,
-                isHot = true,
-                containerColor = Color(0xFFFFF3E0),
-                onBookmarkToggle = { viewModel.toggleBookmark(ad) } // Добавляем обработчик
-            )
+        Text(
+            text = "Горячие объявления",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(hotAds) { ad ->
+                AnnouncementItemFigma(
+                    announcement = ad,
+                    isHot = true,
+                    containerColor = Color(0xFFFFF3E0),
+                    onBookmarkToggle = { viewModel.toggleBookmark(ad) }
+                )
+            }
         }
     }
 }
