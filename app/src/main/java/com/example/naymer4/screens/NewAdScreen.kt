@@ -1,37 +1,58 @@
 package com.example.naymer4.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.naymer4.Announcement
 import com.example.naymer4.AppViewModel
 import com.example.naymer4.TimePickerDialog
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.items
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun NewAdsScreen(
     navController: NavController,
@@ -59,8 +80,75 @@ fun NewAdsScreen(
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
 
+    val services = remember { mutableStateListOf<Pair<String, String>>() }
+    var showAddServiceDialog by remember { mutableStateOf(false) }
+    var newServiceName by remember { mutableStateOf("") }
+    var newServicePrice by remember { mutableStateOf("") }
+
     fun formatTime(hours: Int, minutes: Int): String {
         return String.format("%02d:%02d", hours, minutes)
+    }
+
+    // Диалог для добавления услуги
+    if (showAddServiceDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddServiceDialog = false },
+            title = { Text("Добавить услугу") },
+            text = {
+                Column {
+                    TextField(
+                        value = newServiceName,
+                        onValueChange = { newServiceName = it },
+                        label = { Text("Название услуги") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        )
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    TextField(
+                        value = newServicePrice,
+                        onValueChange = { newServicePrice = it },
+                        label = { Text("Стоимость") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newServiceName.isNotBlank() && newServicePrice.isNotBlank()) {
+                            services.add(newServiceName to newServicePrice)
+                            newServiceName = ""
+                            newServicePrice = ""
+                            showAddServiceDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Добавить")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showAddServiceDialog = false },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Text("Отмена")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     }
 
     LazyColumn(
@@ -147,6 +235,77 @@ fun NewAdsScreen(
 
             // Если обычное объявление, показываем выбор рабочих дней
             if (!isHotAd) {
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Список услуг",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = { showAddServiceDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text("Добавить услугу")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.heightIn(max = 200.dp), // Ограничение высоты
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        items = services,
+                        key = { (name, price) -> name + price }
+                    ) { (name, price) ->
+                        Modifier
+                            .fillMaxWidth()
+                        Surface(
+                            modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null), // Правильный модификатор анимации
+                            color = MaterialTheme.colorScheme.surface,
+                            shape = MaterialTheme.shapes.medium,
+                            shadowElevation = 2.dp
+                        ) {
+                            Box(modifier = Modifier.padding(12.dp)) {
+                                Column {
+                                    Text(
+                                        text = name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "$price ₽",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.secondary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { services.remove(name to price) },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Удалить",
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Text(text = "Дни работы", style = MaterialTheme.typography.titleMedium)
                 Row(modifier = Modifier.fillMaxWidth()) {
                     daysOfWeek.forEach { day ->
@@ -210,18 +369,34 @@ fun NewAdsScreen(
 
             Button(
                 onClick = {
-                    val newAnnouncement = Announcement(
-                        title = title,
-                        price = price,
-                        category = selectedCategory,
-                        geo = address,
-                        workingTime = "${formatTime(startTimeState.hour, startTimeState.minute)} - " +
-                                "${formatTime(endTimeState.hour, endTimeState.minute)}",
-                        isHot = isHotAd
-                    )
-                    viewModel.addAd(newAnnouncement)
-                    navController.navigate("adsList") {
-                        popUpTo("adsList") { inclusive = true }
+                    try {
+
+                        // Проверка заполнения обязательных полей
+                        if (title.isBlank() || price.isBlank() || address.isBlank()) {
+                            // Показать ошибку
+                            return@Button
+                        }
+
+                        val newAnnouncement = Announcement(
+                            title = title,
+                            price = price,
+                            category = selectedCategory,
+                            geo = address,
+                            workingTime = "${
+                                formatTime(
+                                    startTimeState.hour,
+                                    startTimeState.minute
+                                )
+                            } - " +
+                                    "${formatTime(endTimeState.hour, endTimeState.minute)}",
+                            isHot = isHotAd
+                        )
+                        viewModel.addAd(newAnnouncement)
+                        navController.navigate("adsList") {
+                            popUpTo("adsList") { inclusive = true }
+                        }
+                    } catch (e: Exception) {
+                        // Обработка ошибки
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
