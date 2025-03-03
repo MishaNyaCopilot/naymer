@@ -59,6 +59,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import com.example.naymer4.screens.BookmarksScreen
+import com.example.naymer4.screens.FilterCriteria
 import com.example.naymer4.screens.NewAdsScreen
 import com.example.naymer4.screens.NormalAdsScreen
 import com.example.naymer4.screens.ProfileScreen
@@ -75,32 +76,85 @@ data class Announcement(
     val isBookmarked: Boolean = false // Добавляем новое поле
 )
 
+enum class SortOrder {
+    DEFAULT, CHEAPER, EXPENSIVE, DATE
+}
+
 class AppViewModel : ViewModel() {
-    val allAds = mutableStateListOf<Announcement>()
+    private val _allAds = mutableStateListOf<Announcement>()
+    val allAds: List<Announcement> get() = _allAds
+
+    val bookmarkedAds: List<Announcement>
+        get() = allAds.filter { it.isBookmarked }
+
+    // Состояние для фильтров (по умолчанию пустое)
+    var filterCriteria by mutableStateOf(FilterCriteria())
+        private set
 
     init {
-        // Загрузка мок-данных из отдельного файла
-        allAds.addAll(MockData.initialAnnouncements)
+        _allAds.addAll(MockData.initialAnnouncements)
     }
 
     fun toggleBookmark(announcement: Announcement) {
-        val index = allAds.indexOfFirst { it == announcement }
+        val index = _allAds.indexOfFirst { it == announcement }
         if (index != -1) {
-            allAds[index] = announcement.copy(isBookmarked = !announcement.isBookmarked)
+            _allAds[index] = announcement.copy(isBookmarked = !announcement.isBookmarked)
         }
     }
 
     fun addAd(announcement: Announcement) {
-        allAds.add(announcement.copy(isUserAd = true))
+        _allAds.add(announcement.copy(isUserAd = true))
     }
 
     fun removeAd(announcement: Announcement) {
-        allAds.remove(announcement)
+        _allAds.remove(announcement)
     }
 
-    val bookmarkedAds: List<Announcement>
-        get() = allAds.filter { it.isBookmarked }
+    // Применяем фильтры, обновляя состояние
+    fun applyFilters(criteria: FilterCriteria) {
+        filterCriteria = criteria
+    }
+
+    val filteredAds: List<Announcement>
+        get() {
+            var ads = _allAds.toList()
+
+            // Фильтрация по нескольким категориям
+            filterCriteria.categories?.takeIf { it.isNotEmpty() }?.let { selectedCategories ->
+                ads = ads.filter { ad -> selectedCategories.contains(ad.category) }
+            }
+
+            // Фильтрация по местоположению (ищем совпадения в поле geo)
+            filterCriteria.location?.let { loc ->
+                ads = ads.filter { it.geo.contains(loc, ignoreCase = true) }
+            }
+
+            // Фильтрация по цене "от"
+            filterCriteria.priceFrom?.let { from ->
+                ads = ads.filter { extractPrice(it.price) >= from }
+            }
+
+            // Фильтрация по цене "до"
+            filterCriteria.priceTo?.let { to ->
+                ads = ads.filter { extractPrice(it.price) <= to }
+            }
+
+            // Сортировка
+            ads = when (filterCriteria.sortOrder) {
+                SortOrder.CHEAPER -> ads.sortedBy { extractPrice(it.price) }
+                SortOrder.EXPENSIVE -> ads.sortedByDescending { extractPrice(it.price) }
+                else -> ads
+            }
+
+            return ads
+        }
+
+    // Вспомогательная функция для извлечения числа из строки цены (например, "50000 руб")
+    private fun extractPrice(price: String): Int {
+        return price.filter { it.isDigit() }.toIntOrNull() ?: 0
+    }
 }
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
