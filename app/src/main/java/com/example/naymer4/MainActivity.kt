@@ -115,6 +115,11 @@ class AppViewModel : ViewModel() {
         filterCriteria = criteria
     }
 
+    // Сбрасываем фильтры до значений по умолчанию
+    fun resetFilters() {
+        filterCriteria = FilterCriteria()
+    }
+
     val filteredAds: List<Announcement>
         get() {
             var ads = _allAds.toList()
