@@ -1,6 +1,5 @@
 package com.example.naymer4.screens
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,7 +51,11 @@ import com.example.naymer4.TimePickerDialog
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.items
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+//fun formatTime(hours: Int, minutes: Int): String {
+//    return String.format("%02d:%02d", hours, minutes)
+//}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewAdsScreen(
     navController: NavController,
@@ -89,6 +92,11 @@ fun NewAdsScreen(
         return String.format("%02d:%02d", hours, minutes)
     }
 
+    // Функция для проверки и фильтрации ввода цены (только цифры)
+    fun filterDigitsOnly(text: String): String {
+        return text.filter { it.isDigit() }
+    }
+
     // Диалог для добавления услуги
     if (showAddServiceDialog) {
         AlertDialog(
@@ -109,7 +117,7 @@ fun NewAdsScreen(
                     Spacer(Modifier.height(8.dp))
                     TextField(
                         value = newServicePrice,
-                        onValueChange = { newServicePrice = it },
+                        onValueChange = { newServicePrice = filterDigitsOnly(it) },
                         label = { Text("Стоимость") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -157,7 +165,11 @@ fun NewAdsScreen(
             .padding(16.dp)
     ) {
         item {
-            Text(text = "Создание объявления", style = MaterialTheme.typography.titleMedium)
+            // Изменение заголовка в зависимости от типа объявления
+            Text(
+                text = if (isHotAd) "Создание горячего объявления" else "Создание объявления",
+                style = MaterialTheme.typography.titleMedium
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -198,7 +210,6 @@ fun NewAdsScreen(
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor()
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,
@@ -225,11 +236,14 @@ fun NewAdsScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Поле для ввода цены (только цифры)
             TextField(
                 value = price,
-                onValueChange = { price = it },
+                onValueChange = { price = filterDigitsOnly(it) },
                 label = { Text("Цена") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                placeholder = { Text("Введите стоимость") }
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -370,7 +384,6 @@ fun NewAdsScreen(
             Button(
                 onClick = {
                     try {
-
                         // Проверка заполнения обязательных полей
                         if (title.isBlank() || price.isBlank() || address.isBlank()) {
                             // Показать ошибку
@@ -382,13 +395,8 @@ fun NewAdsScreen(
                             price = price,
                             category = selectedCategory,
                             geo = address,
-                            workingTime = "${
-                                formatTime(
-                                    startTimeState.hour,
-                                    startTimeState.minute
-                                )
-                            } - " +
-                                    "${formatTime(endTimeState.hour, endTimeState.minute)}",
+                            workingTime = formatTime(startTimeState.hour, startTimeState.minute) + " - " +
+                                    formatTime(endTimeState.hour, endTimeState.minute),
                             isHot = isHotAd
                         )
                         viewModel.addAd(newAnnouncement)
