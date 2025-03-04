@@ -1,6 +1,5 @@
 package com.example.naymer4.screens
 
-import androidx.benchmark.perfetto.Row
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -158,7 +157,7 @@ fun NormalAdsScreen(viewModel: AppViewModel) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FullScreenFilterMenu(
     currentFilters: FilterCriteria,
