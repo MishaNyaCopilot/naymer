@@ -58,22 +58,30 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
+import androidx.lifecycle.viewModelScope
 import com.example.naymer4.screens.BookmarksScreen
 import com.example.naymer4.screens.FilterCriteria
 import com.example.naymer4.screens.NewAdsScreen
 import com.example.naymer4.screens.NormalAdsScreen
 import com.example.naymer4.screens.ProfileScreen
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 
-// model/Announcement.kt
+@Serializable
 data class Announcement(
+    val id: Int? = null,
     val title: String,
     val price: String,
     val category: String,
     val geo: String,
-    val workingTime: String,
-    val isHot: Boolean = false,
-    val isUserAd: Boolean = false,
-    val isBookmarked: Boolean = false // Добавляем новое поле
+    @SerialName("working_time") val workingTime: String,
+    @SerialName("is_hot") val isHot: Boolean = false,
+    @SerialName("is_user_ad") val isUserAd: Boolean = false,
+    @SerialName("is_bookmarked") val isBookmarked: Boolean = false
 )
 
 enum class SortOrder {
@@ -87,12 +95,34 @@ class AppViewModel : ViewModel() {
     val bookmarkedAds: List<Announcement>
         get() = allAds.filter { it.isBookmarked }
 
-    // Состояние для фильтров (по умолчанию пустое)
     var filterCriteria by mutableStateOf(FilterCriteria())
         private set
 
     init {
-        _allAds.addAll(MockData.initialAnnouncements)
+        fetchAnnouncements()
+    }
+
+    private fun fetchAnnouncements() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val fetchedAds = SupabaseClientInstance.client.from("announcementstest")
+                    .select()
+                    .decodeList<Announcement>()
+
+                println("Fetched ads count: ${fetchedAds.size}")
+                fetchedAds.forEach {
+                    println("Fetched ad: $it")
+                }
+
+                withContext(Dispatchers.Main) {
+                    _allAds.clear()
+                    _allAds.addAll(fetchedAds)
+                }
+            } catch (e: Exception) {
+                println("Error fetching announcements: ${e.message}")
+                e.printStackTrace()
+            }
+        }
     }
 
     fun toggleBookmark(announcement: Announcement) {
@@ -103,11 +133,42 @@ class AppViewModel : ViewModel() {
     }
 
     fun addAd(announcement: Announcement) {
-        _allAds.add(announcement.copy(isUserAd = true))
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val insertedAnnouncement = SupabaseClientInstance.client.from("announcementstest")
+                    .insert(announcement) {
+                        select() // Возвращаем inserted запись
+                    }.decodeSingle<Announcement>()
+
+                withContext(Dispatchers.Main) {
+                    _allAds.add(insertedAnnouncement)
+                }
+            } catch (e: Exception) {
+                println("Error adding announcement: ${e.message}")
+                e.printStackTrace() // Добавьте более подробный вывод ошибки
+            }
+        }
     }
 
+    // Remove an announcement from Supabase
     fun removeAd(announcement: Announcement) {
-        _allAds.remove(announcement)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Delete from Supabase (assumes there's an 'id' field)
+                announcement.id?.let {
+                    SupabaseClientInstance.client.from("announcementstest")
+                        .delete {
+                            filter { eq("id", it) }
+                        }
+
+                    // Remove from local list
+                    _allAds.remove(announcement)
+                }
+            } catch (e: Exception) {
+                // Handle error
+                println("Error removing announcement: ${e.message}")
+            }
+        }
     }
 
     // Применяем фильтры, обновляя состояние

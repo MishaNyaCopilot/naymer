@@ -88,6 +88,23 @@ fun NewAdsScreen(
     var newServiceName by remember { mutableStateOf("") }
     var newServicePrice by remember { mutableStateOf("") }
 
+    // Add a state for showing error messages
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Create a reusable error message Composable
+    @Composable
+    fun ErrorMessageDisplay(message: String?) {
+        message?.let { error ->
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            )
+        }
+    }
+
     fun formatTime(hours: Int, minutes: Int): String {
         return String.format("%02d:%02d", hours, minutes)
     }
@@ -381,30 +398,62 @@ fun NewAdsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Modify the button onClick to include error handling and Supabase saving
+
+            ErrorMessageDisplay(errorMessage)
+
             Button(
                 onClick = {
-                    try {
-                        // Проверка заполнения обязательных полей
-                        if (title.isBlank() || price.isBlank() || address.isBlank()) {
-                            // Показать ошибку
+                    // Validate required fields
+                    when {
+                        title.isBlank() -> {
+                            errorMessage = "Название объявления не может быть пустым"
                             return@Button
                         }
-
-                        val newAnnouncement = Announcement(
-                            title = title,
-                            price = price,
-                            category = selectedCategory,
-                            geo = address,
-                            workingTime = formatTime(startTimeState.hour, startTimeState.minute) + " - " +
-                                    formatTime(endTimeState.hour, endTimeState.minute),
-                            isHot = isHotAd
-                        )
-                        viewModel.addAd(newAnnouncement)
-                        navController.navigate("adsList") {
-                            popUpTo("adsList") { inclusive = true }
+                        price.isBlank() -> {
+                            errorMessage = "Цена не может быть пустой"
+                            return@Button
                         }
-                    } catch (e: Exception) {
-                        // Обработка ошибки
+                        address.isBlank() -> {
+                            errorMessage = "Адрес не может быть пустым"
+                            return@Button
+                        }
+                        else -> {
+                            // Clear any previous error messages
+                            errorMessage = null
+
+                            // Prepare working time string
+                            val workTime = formatTime(startTimeState.hour, startTimeState.minute) + " - " +
+                                    formatTime(endTimeState.hour, endTimeState.minute)
+
+                            // Prepare additional data for hot/normal ads
+                            val additionalData = if (!isHotAd) {
+                                // For normal ads, include services and working days
+                                mapOf(
+                                    "services" to services.map { "${it.first}: ${it.second} ₽" }.joinToString("; "),
+                                    "working_days" to selectedDays.joinToString(", ")
+                                )
+                            } else {
+                                emptyMap()
+                            }
+
+                            val newAnnouncement = Announcement(
+                                title = title,
+                                price = "$price ₽", // Add currency
+                                category = selectedCategory,
+                                geo = address,
+                                workingTime = workTime,
+                                isHot = isHotAd
+                            )
+
+                            // Call ViewModel method to add ad
+                            viewModel.addAd(newAnnouncement)
+
+                            // Navigate back to ads list
+                            navController.navigate("adsList") {
+                                popUpTo("adsList") { inclusive = true }
+                            }
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -413,5 +462,16 @@ fun NewAdsScreen(
             }
             Spacer(modifier = Modifier.height(32.dp))
         }
+
+        // Display error message if exists
+//        errorMessage?.let { error ->
+//            Text(
+//                text = error,
+//                color = MaterialTheme.colorScheme.error,
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(vertical = 8.dp)
+//            )
+//        }
     }
 }
